@@ -61,6 +61,13 @@ def test_mock_mode_unknown_bilingual(monkeypatch):
     assert "mock mode" in ask("hello").lower()
 
 
+def test_lang_param_overrides_autodetect(monkeypatch):
+    monkeypatch.delenv("DASHSCOPE_API_KEY", raising=False)
+    bill = "Electricity bill. Amount due: Rs. 8,450. 12 days late."
+    assert "روپے" in ask(bill, lang="ur")  # force Urdu on an English notice
+    assert "Rs" in ask(bill, lang="en")     # force English explicitly
+
+
 def test_demo_examples_cover_all_doc_types():
     detected = {tools.classify_document(ex["text"])["doc_type"] for ex in EXAMPLES}
     assert {"electricity_bill", "court_notice", "flood_alert", "tax_notice"} <= detected

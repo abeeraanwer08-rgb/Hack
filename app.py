@@ -202,7 +202,8 @@ class Handler(BaseHTTPRequestHandler):
         length = int(self.headers.get("Content-Length", 0))
         body = json.loads(self.rfile.read(length) or b"{}")
         question = str(body.get("q", ""))[:4000]
-        answer = ask(question) if question else "Please type or paste something first."
+        lang = str(body.get("lang", "auto"))
+        answer = ask(question, lang=lang) if question else "Please type or paste something first."
         self._json(200, {"answer": answer})
 
     def _json(self, code, obj):

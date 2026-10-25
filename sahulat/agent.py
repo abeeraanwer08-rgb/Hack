@@ -96,9 +96,9 @@ def _mock_flood(text: str, urdu: bool) -> str:
     return " ".join(lines)
 
 
-def _mock(question: str) -> str:
+def _mock(question: str, lang: str = "auto") -> str:
     """Offline, rule-based fallback so the demo never dies on stage or in CI."""
-    urdu = _is_urdu(question)
+    urdu = {"ur": True, "en": False}.get(lang, _is_urdu(question))
     doc_type = tools.classify_document(question)["doc_type"]
     if doc_type in ("electricity_bill", "gas_bill"):
         return _mock_bill(question, urdu)
@@ -113,11 +113,19 @@ def _mock(question: str) -> str:
                       if not urdu else "کوئی بل، عدالتی نوٹس، ٹیکس نوٹس یا سیلاب الرٹ بھیجیں۔")
 
 
-def ask(question: str, history: list | None = None) -> str:
+_LANG_INSTRUCTION = {
+    "en": "Reply in English only, regardless of the language the notice is written in.",
+    "ur": "اردو میں جواب دیں، نوٹس کسی بھی زبان میں ہو۔ (Reply in Urdu only.)",
+}
+
+
+def ask(question: str, history: list | None = None, lang: str = "auto") -> str:
+    """lang: 'auto' (detect from the question), 'en', or 'ur' — overrides detection."""
     if not os.environ.get("DASHSCOPE_API_KEY"):
-        return _mock(question)
+        return _mock(question, lang)
     client = _client()
-    messages = [{"role": "system", "content": SYSTEM}, *(history or []), {"role": "user", "content": question}]
+    system = SYSTEM + ((" " + _LANG_INSTRUCTION[lang]) if lang in _LANG_INSTRUCTION else "")
+    messages = [{"role": "system", "content": system}, *(history or []), {"role": "user", "content": question}]
     for _ in range(MAX_STEPS):
         msg = client.chat.completions.create(model=MODEL, messages=messages, tools=tools.SCHEMAS).choices[0].message
         if not msg.tool_calls:
